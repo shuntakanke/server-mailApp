@@ -1,29 +1,30 @@
 const express = require('express');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const connectDB = require('./config/db');
+const cookieSession = require('cookie-session'); //cookieを使えるようにする
+const passport = require('passport'); //passportがcookieを使えるようにする
 const keys = require('./config/keys');
+require('./models/User');
+require('./services/passport');
+
+connectDB();
 
 const app = express();
 
-passport.use(new GoogleStrategy({
-  clientID: keys.googleClientID,
-  clientSecret:keys.googleClientSecret,
-  callbackURL: '/auth/google/callback'
-  }, (accessToken, refreshToken, profile, done) => {
-    console.log(profile);
+app.use(
+  cookieSession({
+    maxAge: 30 * 24 * 60 * 60 * 1000,
+    keys: [keys.cookieKey]
   })
 );
 
-app.get('/auth/google/callback', passport.authenticate('google'));
+app.use(passport.initialize());
+app.use(passport.session());
 
+app.get('/api/current_user', (req, res) => {
+  res.send(req.user);
+});
 
-app.get('/auth/google', passport.authenticate('google', {
-  scope: ['profile', 'email'] 
-  })
-);
-
-
-
+require('./routes/authRoutes')(app);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT);
